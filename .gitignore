@@ -1,25 +1,6 @@
-# Environment variables (contains DB password)
 .env
-
-# Python
 venv/
 __pycache__/
-*.pyc
-*.pyo
-*.egg-info/
-
-# AI Model weights (large files)
 models/
+gfpgan/weights/
 *.pth
-
-# User uploads & outputs
-uploads/
-outputs/
-
-# IDE
-.vscode/
-.idea/
-
-# OS
-Thumbs.db
-.DS_Store
