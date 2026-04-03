@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CCTV Face Reconstruction System | AI-Powered Face Enhancement</title>
+    <meta name="description" content="Enhance low-quality CCTV footage faces using GFPGAN and Real-ESRGAN AI models. Restore pixelated, blurry faces from surveillance cameras.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+    <!-- Animated Background Grid -->
+    <div class="bg-grid"></div>
+    <div class="bg-glow bg-glow-1"></div>
+    <div class="bg-glow bg-glow-2"></div>
+
+    <!-- Header -->
+    <header class="header" id="header">
+        <div class="header-content">
+            <div class="logo">
+                <div class="logo-icon">
+                    <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+                        <rect x="2" y="2" width="28" height="28" rx="6" stroke="url(#logoGrad)" stroke-width="2.5"/>
+                        <circle cx="16" cy="14" r="5" stroke="url(#logoGrad)" stroke-width="2"/>
+                        <path d="M8 24c0-4.4 3.6-8 8-8s8 3.6 8 8" stroke="url(#logoGrad)" stroke-width="2" stroke-linecap="round"/>
+                        <defs>
+                            <linearGradient id="logoGrad" x1="0" y1="0" x2="32" y2="32">
+                                <stop stop-color="#00d4ff"/>
+                                <stop offset="1" stop-color="#7c3aed"/>
+                            </linearGradient>
+                        </defs>
+                    </svg>
+                </div>
+                <div>
+                    <h1>CCTV Face Reconstruction</h1>
+                    <p class="logo-subtitle">AI-Powered Enhancement System</p>
+                </div>
+            </div>
+            <nav class="nav" id="main-nav">
+                <button class="nav-btn active" data-tab="enhance" id="nav-enhance">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v18M3 12h18"/><circle cx="12" cy="12" r="10"/></svg>
+                    Enhance
+                </button>
+                <button class="nav-btn" data-tab="video" id="nav-video">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M10 9l5 3-5 3V9z"/></svg>
+                    Video
+                </button>
+                <button class="nav-btn" data-tab="history" id="nav-history">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/></svg>
+                    History
+                </button>
+                <button class="nav-btn" data-tab="stats" id="nav-stats">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+                    Stats
+                </button>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main" id="main-content">
+
+        <!-- ==================== ENHANCE TAB ==================== -->
+        <section class="tab-content active" id="tab-enhance">
+            <div class="section-grid">
+                <!-- Left Column: Upload & Settings -->
+                <div class="column">
+                    <!-- Upload Zone -->
+                    <div class="card" id="upload-card">
+                        <div class="card-header">
+                            <h2>
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17,8 12,3 7,8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                                Upload Image
+                            </h2>
+                        </div>
+                        <div class="upload-zone" id="upload-zone">
+                            <div class="upload-content">
+                                <div class="upload-icon">
+                                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+                                        <polyline points="17,8 12,3 7,8"/>
+                                        <line x1="12" y1="3" x2="12" y2="15"/>
+                                    </svg>
+                                </div>
+                                <p class="upload-text">Drag & Drop your CCTV image here</p>
+                                <p class="upload-subtext">or click to browse files</p>
+                                <p class="upload-formats">JPG, PNG, BMP, WebP • Max 100MB</p>
+                            </div>
+                            <input type="file" id="file-input" accept=".jpg,.jpeg,.png,.bmp,.webp,.tiff" hidden>
+                        </div>
+
+                        <!-- Image Preview -->
+                        <div class="preview-container hidden" id="preview-container">
+                            <img id="preview-image" alt="Preview">
+                            <div class="preview-info" id="preview-info"></div>
+                            <button class="btn btn-ghost btn-sm" id="clear-upload">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                                Clear
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Settings Card -->
+                    <div class="card" id="settings-card">
+                        <div class="card-header">
+                            <h2>
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+                                Enhancement Settings
+                            </h2>
+                        </div>
+                        <div class="settings-form">
+                            <!-- Model Selection -->
+                            <div class="form-group">
+                                <label class="form-label">AI Model</label>
+                                <div class="model-selector" id="model-selector">
+                                    <button class="model-option active" data-model="gfpgan" id="model-gfpgan">
+                                        <div class="model-badge recommended">Recommended</div>
+                                        <div class="model-name">GFPGAN v1.4</div>
+                                        <div class="model-desc">Face restoration + background</div>
+                                    </button>
+                                    <button class="model-option" data-model="realesrgan" id="model-realesrgan">
+                                        <div class="model-name">Real-ESRGAN</div>
+                                        <div class="model-desc">Full image upscaling</div>
+                                    </button>
+                                    <button class="model-option" data-model="fsrcnn" id="model-fsrcnn">
+                                        <div class="model-name">Fast SR (Low RAM)</div>
+                                        <div class="model-desc">Works on any PC instantly</div>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Upscale Factor -->
+                            <div class="form-group">
+                                <label class="form-label">Upscale Factor</label>
+                                <div class="toggle-group" id="upscale-selector">
+                                    <button class="toggle-btn active" data-value="2">2x</button>
+                                    <button class="toggle-btn" data-value="4">4x</button>
+                                </div>
+                            </div>
+
+                            <!-- Enhance Button -->
+                            <button class="btn btn-primary btn-lg" id="enhance-btn" disabled>
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+                                Enhance Image
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column: Results -->
+                <div class="column">
+                    <!-- Processing Status -->
+                    <div class="card hidden" id="processing-card">
+                        <div class="card-header">
+                            <h2>
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="spin"><path d="M21 12a9 9 0 11-6.219-8.56"/></svg>
+                                Processing...
+                            </h2>
+                        </div>
+                        <div class="processing-content">
+                            <div class="progress-bar">
+                                <div class="progress-fill" id="progress-fill"></div>
+                            </div>
+                            <p class="processing-status" id="processing-status">Initializing AI models...</p>
+                            <p class="processing-note">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                                CPU mode — processing may take 30-60 seconds
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Results Card -->
+                    <div class="card hidden" id="results-card">
+                        <div class="card-header">
+                            <h2>
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22,4 12,14.01 9,11.01"/></svg>
+                                Enhancement Results
+                            </h2>
+                            <div class="result-stats" id="result-stats"></div>
+                        </div>
+
+                        <!-- Before/After Comparison -->
+                        <div class="compare-container" id="compare-container">
+                            <div class="compare-wrapper">
+                                <div class="compare-before" id="compare-before">
+                                    <img id="compare-before-img" alt="Before">
+                                    <span class="compare-label">BEFORE</span>
+                                </div>
+                                <div class="compare-after" id="compare-after">
+                                    <img id="compare-after-img" alt="After">
+                                    <span class="compare-label">AFTER</span>
+                                </div>
+                                <div class="compare-slider" id="compare-slider">
+                                    <div class="compare-handle">
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15,18 9,12 15,6"/></svg>
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9,18 15,12 9,6"/></svg>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Download Button -->
+                        <div class="result-actions">
+                            <a class="btn btn-primary" id="download-btn" download>
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7,10 12,15 17,10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                Download Enhanced
+                            </a>
+                            <button class="btn btn-ghost" id="new-enhance-btn">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v18M3 12h18"/></svg>
+                                New Enhancement
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Detected Faces -->
+                    <div class="card hidden" id="faces-card">
+                        <div class="card-header">
+                            <h2>
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 10-16 0"/></svg>
+                                Detected Faces
+                            </h2>
+                            <span class="badge" id="face-count">0</span>
+                        </div>
+                        <div class="faces-grid" id="faces-grid"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== VIDEO TAB ==================== -->
+        <section class="tab-content" id="tab-video">
+            <div class="section-grid">
+                <div class="column">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2>
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M10 9l5 3-5 3V9z"/></svg>
+                                Upload CCTV Video
+                            </h2>
+                        </div>
+                        <div class="upload-zone" id="video-upload-zone">
+                            <div class="upload-content">
+                                <div class="upload-icon">
+                                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                        <rect x="2" y="4" width="20" height="16" rx="2"/>
+                                        <path d="M10 9l5 3-5 3V9z"/>
+                                    </svg>
+                                </div>
+                                <p class="upload-text">Drag & Drop CCTV video here</p>
+                                <p class="upload-subtext">or click to browse files</p>
+                                <p class="upload-formats">MP4, AVI, MOV, MKV • Max 100MB</p>
+                            </div>
+                            <input type="file" id="video-file-input" accept=".mp4,.avi,.mov,.mkv,.wmv" hidden>
+                        </div>
+
+                        <!-- Video Preview -->
+                        <div class="preview-container hidden" id="video-preview-container">
+                            <video id="video-preview" controls></video>
+                            <button class="btn btn-ghost btn-sm" id="clear-video">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                                Clear
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Video Settings -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h2>Video Settings</h2>
+                        </div>
+                        <div class="settings-form">
+                            <div class="form-group">
+                                <label class="form-label">Process every Nth frame</label>
+                                <div class="toggle-group" id="frame-interval-selector">
+                                    <button class="toggle-btn" data-value="1">Every</button>
+                                    <button class="toggle-btn active" data-value="5">5th</button>
+                                    <button class="toggle-btn" data-value="10">10th</button>
+                                    <button class="toggle-btn" data-value="30">30th</button>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Max Frames to Process</label>
+                                <input type="number" class="form-input" id="max-frames" value="50" min="1" max="500">
+                            </div>
+                            <button class="btn btn-primary btn-lg" id="enhance-video-btn" disabled>
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+                                Enhance Video
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Video Results -->
+                <div class="column">
+                    <div class="card hidden" id="video-processing-card">
+                        <div class="card-header"><h2>Processing Video...</h2></div>
+                        <div class="processing-content">
+                            <div class="progress-bar">
+                                <div class="progress-fill" id="video-progress-fill"></div>
+                            </div>
+                            <p class="processing-status" id="video-processing-status">Extracting frames...</p>
+                            <p class="processing-note">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                                Video processing can take several minutes on CPU
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="card hidden" id="video-results-card">
+                        <div class="card-header">
+                            <h2>Video Enhancement Results</h2>
+                        </div>
+                        <div class="video-results-content" id="video-results-content"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== HISTORY TAB ==================== -->
+        <section class="tab-content" id="tab-history">
+            <div class="card">
+                <div class="card-header">
+                    <h2>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/></svg>
+                        Processing History
+                    </h2>
+                    <div class="history-filters">
+                        <select class="form-select" id="history-filter-status">
+                            <option value="">All Status</option>
+                            <option value="completed">Completed</option>
+                            <option value="failed">Failed</option>
+                            <option value="processing">Processing</option>
+                        </select>
+                        <select class="form-select" id="history-filter-type">
+                            <option value="">All Types</option>
+                            <option value="image">Images</option>
+                            <option value="video">Videos</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="history-list" id="history-list">
+                    <div class="empty-state">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/></svg>
+                        <p>No processing history yet</p>
+                        <p class="text-muted">Enhanced images and videos will appear here</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== STATS TAB ==================== -->
+        <section class="tab-content" id="tab-stats">
+            <div class="stats-grid" id="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon stat-icon-blue">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+                    </div>
+                    <div class="stat-value" id="stat-total-jobs">0</div>
+                    <div class="stat-label">Total Jobs</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon stat-icon-green">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22,4 12,14.01 9,11.01"/></svg>
+                    </div>
+                    <div class="stat-value" id="stat-completed">0</div>
+                    <div class="stat-label">Completed</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon stat-icon-purple">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 10-16 0"/></svg>
+                    </div>
+                    <div class="stat-value" id="stat-faces">0</div>
+                    <div class="stat-label">Faces Detected</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon stat-icon-orange">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/></svg>
+                    </div>
+                    <div class="stat-value" id="stat-avg-time">0s</div>
+                    <div class="stat-label">Avg. Processing Time</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2>System Information</h2>
+                </div>
+                <div class="system-info" id="system-info">
+                    <div class="info-row">
+                        <span class="info-label">Device</span>
+                        <span class="info-value" id="info-device">CPU (Intel UHD)</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">GFPGAN Model</span>
+                        <span class="info-value" id="info-gfpgan">Not loaded</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Real-ESRGAN</span>
+                        <span class="info-value" id="info-realesrgan">Not loaded</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Toast Notifications -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
