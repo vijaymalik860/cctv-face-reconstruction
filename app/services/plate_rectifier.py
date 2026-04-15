@@ -4,25 +4,22 @@ Number Plate Rectifier Service
 Straightens tilted / perspective-warped plate crops so OCR reads them cleanly.
 
 Pipeline:
-  1. minAreaRect  → correct small rotation angle (deskew)
-  2. findContours → if a clean 4-point quadrilateral is found, warpPerspective
-  3. Resize to TARGET_W × TARGET_H for consistent OCR input
+  1. WPOD-NET (if model files exist) — precise perspective correction
+  2. Fallback: simple resize to TARGET_W × TARGET_H
 
-No TensorFlow / WPOD-NET dependency — pure OpenCV, zero extra downloads.
+TensorFlow is lazy-loaded only on first use to avoid MemoryError at startup.
 """
 import os
 import sys
 import cv2
 import numpy as np
 
-# Suppress TensorFlow logging
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
-import tensorflow as tf
-from tensorflow.keras.models import model_from_json
-
 from app.config import MODEL_DIR
 
-# Import local_utils for WPOD-NET
+# Suppress TensorFlow logging (set before any tf import)
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+
+# Import local_utils for WPOD-NET (lazy — only needed if model is present)
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 try:
     from local_utils import detect_lp
@@ -48,6 +45,10 @@ class PlateRectifier:
             return
 
         try:
+            # Lazy import — TF only loaded when WPOD-NET model files are present
+            import tensorflow as tf
+            from tensorflow.keras.models import model_from_json
+
             with open(json_path, 'r') as f:
                 json_str = f.read()
             self._model = model_from_json(json_str, custom_objects={'tf': tf})

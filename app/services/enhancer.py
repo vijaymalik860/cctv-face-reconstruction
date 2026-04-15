@@ -390,16 +390,27 @@ class FaceEnhancer:
         self,
         plate_crop: np.ndarray,
         upscale: int = 4,
+        is_night: bool = False,
     ) -> np.ndarray:
         """
         Sharpen / upscale a single rectified number plate crop.
 
-        Uses Real-ESRGAN ×4 for maximum text clarity.
-        Falls back to OpenCV bicubic + CLAHE + unsharp-mask when RAM is low.
+        Night mode (is_night=True) runs a dedicated dark-CCTV pipeline:
+          1. Extreme CLAHE (clipLimit=8) to lift shadows
+          2. Aggressive gamma correction (γ=0.35)
+          3. Second CLAHE pass to restore local contrast
+          4. Dark-channel dehazing
+          5. Wiener-like deblur (Laplacian sharpening)
+          6. Bilateral denoise
+          7. Super-resolution (Real-ESRGAN or OpenCV bicubic)
+          8. Final unsharp mask
+
+        Day mode uses Real-ESRGAN → OpenCV fallback (existing pipeline).
 
         Args:
             plate_crop: BGR numpy array — rectified plate (e.g. 300×100)
             upscale:    upscale factor (default 4 for plates)
+            is_night:   True if the source frame was detected as night/dark
 
         Returns:
             Enhanced BGR numpy array.
@@ -407,9 +418,18 @@ class FaceEnhancer:
         if plate_crop is None or plate_crop.size == 0:
             return plate_crop
 
-        # Constrain input size (plates are already small — 300×100 → fine)
+        # Constrain input size
         plate_crop = self._limit_size(plate_crop, max_dim=600)
 
+        # ------------------------------------------------------------------ #
+        # NIGHT pipeline — dedicated dark CCTV processing                     #
+        # ------------------------------------------------------------------ #
+        if is_night:
+            return self._enhance_plate_night(plate_crop, upscale)
+
+        # ------------------------------------------------------------------ #
+        # DAY pipeline — Real-ESRGAN → OpenCV fallback                        #
+        # ------------------------------------------------------------------ #
         try:
             up = self._get_bg_upsampler(upscale)
             if up is not None:
@@ -419,7 +439,105 @@ class FaceEnhancer:
         except Exception as e:
             print(f"[FaceEnhancer] Real-ESRGAN plate enhance failed: {e}")
 
-        # Fallback: fast OpenCV sharpening
+        # Day fallback
+        return self._enhance_plate_opencv(plate_crop, upscale,
+                                          clahe_clip=3.0, gamma=None)
+
+    def _enhance_plate_night(self, plate_crop: np.ndarray, upscale: int) -> np.ndarray:
+        """
+        Multi-stage enhancement for dark/night CCTV number plates.
+        Designed for the exact scenario: parked car at night, dim plate,
+        partial shadow, possible motion blur.
+        """
+        print("[FaceEnhancer] Night plate pipeline: CLAHE → dehaze → deblur → SR")
+        img = plate_crop.copy()
+
+        # ── Step 1: Extreme CLAHE on L channel ──────────────────────────────
+        lab = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
+        L, A, B = cv2.split(lab)
+        clahe1 = cv2.createCLAHE(clipLimit=8.0, tileGridSize=(4, 4))
+        L = clahe1.apply(L)
+        img = cv2.cvtColor(cv2.merge([L, A, B]), cv2.COLOR_LAB2BGR)
+        del lab, L, A, B
+        gc.collect()
+
+        # ── Step 2: Aggressive gamma lift (γ=0.35) ──────────────────────────
+        lut = np.array(
+            [min(255, int((i / 255.0) ** 0.35 * 255)) for i in range(256)],
+            dtype=np.uint8
+        )
+        img = cv2.LUT(img, lut)
+
+        # ── Step 3: Second CLAHE pass (restore local contrast after gamma) ───
+        lab = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
+        L, A, B = cv2.split(lab)
+        clahe2 = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(6, 6))
+        L = clahe2.apply(L)
+        img = cv2.cvtColor(cv2.merge([L, A, B]), cv2.COLOR_LAB2BGR)
+        del lab, L, A, B
+        gc.collect()
+
+        # ── Step 4: Dark channel dehazing ───────────────────────────────────
+        try:
+            img_f = img.astype(np.float32) / 255.0
+            dark  = np.min(img_f, axis=2)
+            dark_blur = cv2.GaussianBlur(dark, (15, 15), 0)
+            # Estimate atmospheric light (top-1% brightest pixels in dark channel)
+            flat = dark_blur.flatten()
+            atm_idx = np.argsort(flat)[-max(1, len(flat) // 100):]
+            atm = np.max(img_f.reshape(-1, 3)[atm_idx], axis=0)
+            atm = np.clip(atm, 0.7, 1.0)
+            # Transmission map
+            t = 1.0 - 0.85 * (dark_blur / (atm.max() + 1e-6))
+            t = np.clip(t, 0.15, 1.0)
+            t3 = np.stack([t, t, t], axis=2)
+            dehazed = (img_f - atm) / t3 + atm
+            img = np.clip(dehazed * 255, 0, 255).astype(np.uint8)
+            del img_f, dark, dark_blur, t, t3, dehazed
+            gc.collect()
+        except Exception as e:
+            print(f"[FaceEnhancer] Dehazing skipped: {e}")
+
+        # ── Step 5: Wiener-style deblur (iterative Laplacian sharpening) ────
+        # Approximate blind deblur via repeated unsharp mask
+        for _ in range(2):
+            blur = cv2.GaussianBlur(img, (0, 0), 1.2)
+            img  = cv2.addWeighted(img, 1.6, blur, -0.6, 0)
+
+        # ── Step 6: Bilateral denoise (preserves edges = character strokes) ─
+        img = cv2.bilateralFilter(img, d=5, sigmaColor=40, sigmaSpace=40)
+        gc.collect()
+
+        # ── Step 7: Super-resolution ─────────────────────────────────────────
+        h, w = img.shape[:2]
+        try:
+            up = self._get_bg_upsampler(upscale)
+            if up is not None:
+                img, _ = up.enhance(img, outscale=upscale)
+                print(f"[FaceEnhancer] Night plate SR: Real-ESRGAN ×{upscale}")
+            else:
+                raise RuntimeError("upsampler not available")
+        except Exception:
+            # FSRCNN or bicubic fallback
+            try:
+                sr = self._load_fsrcnn(upscale)
+                img = sr.upsample(img)
+            except Exception:
+                img = cv2.resize(img, (w * upscale, h * upscale),
+                                 interpolation=cv2.INTER_LANCZOS4)
+
+        # ── Step 8: Final unsharp mask to crisp up characters ────────────────
+        blur_final = cv2.GaussianBlur(img, (0, 0), 1.0)
+        img = cv2.addWeighted(img, 1.4, blur_final, -0.4, 0)
+
+        print(f"[FaceEnhancer] Night plate done: {w}×{h} → {img.shape[1]}×{img.shape[0]}")
+        gc.collect()
+        return img
+
+    def _enhance_plate_opencv(self, plate_crop: np.ndarray, upscale: int,
+                               clahe_clip: float = 3.0,
+                               gamma: float = None) -> np.ndarray:
+        """Lightweight OpenCV plate enhancement (day fallback)."""
         print("[FaceEnhancer] Using OpenCV fallback for plate enhancement")
         h, w = plate_crop.shape[:2]
         result = cv2.resize(plate_crop, (w * upscale, h * upscale),
@@ -427,9 +545,15 @@ class FaceEnhancer:
         # CLAHE on L channel
         lab = cv2.cvtColor(result, cv2.COLOR_BGR2LAB)
         L, A, B = cv2.split(lab)
-        clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(4, 4))
+        clahe = cv2.createCLAHE(clipLimit=clahe_clip, tileGridSize=(4, 4))
         L = clahe.apply(L)
         result = cv2.cvtColor(cv2.merge([L, A, B]), cv2.COLOR_LAB2BGR)
+        del lab, L, A, B
+        if gamma is not None:
+            lut = np.array(
+                [min(255, int((i / 255.0) ** gamma * 255)) for i in range(256)],
+                dtype=np.uint8)
+            result = cv2.LUT(result, lut)
         # Unsharp mask
         blur   = cv2.GaussianBlur(result, (0, 0), 1.5)
         result = cv2.addWeighted(result, 1.5, blur, -0.5, 0)

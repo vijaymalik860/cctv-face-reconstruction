@@ -97,7 +97,10 @@ def _run_pipeline(
         cv2.imwrite(str(rect_path), rectified)
 
         # ---- Step 3: Enhance ----
-        enhanced = face_enhancer.enhance_plate(rectified, upscale=upscale)
+        is_night_plate = meta.get("is_night_vision", False)
+        enhanced = face_enhancer.enhance_plate(
+            rectified, upscale=upscale, is_night=is_night_plate
+        )
         enh_path  = out_dir / f"{prefix}_enhanced.jpg"
         cv2.imwrite(str(enh_path), enhanced)
 
