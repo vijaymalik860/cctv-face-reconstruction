@@ -40,6 +40,8 @@ async def enhance_image(
     upscale: int = Form(2),
     face_enhance: bool = Form(True),
     bg_enhance: bool = Form(True),
+    fidelity: float = Form(0.5),
+    force_night: bool = Form(False),
     db: Session = Depends(get_db)
 ):
     """Upload and enhance a single image."""
@@ -82,6 +84,9 @@ async def enhance_image(
         if image is None:
             raise ValueError("Could not decode image")
 
+        if force_night:
+            image = face_detector.preprocess_night_vision(image)
+
         # Detect faces
         faces = face_detector.detect_faces(image)
         job.faces_detected = len(faces)
@@ -100,7 +105,8 @@ async def enhance_image(
         # Enhance image
         enhanced_img, cropped_faces, restored_faces, proc_time = face_enhancer.enhance_image(
             image, model=model, upscale=upscale,
-            face_enhance=face_enhance, bg_enhance=bg_enhance
+            face_enhance=face_enhance, bg_enhance=bg_enhance,
+            fidelity=fidelity
         )
 
         # Save results
@@ -177,6 +183,8 @@ async def enhance_video(
     upscale: int = Form(2),
     frame_interval: int = Form(5),
     max_frames: int = Form(50),
+    fidelity: float = Form(0.5),
+    force_night: bool = Form(False),
     db: Session = Depends(get_db)
 ):
     """Upload and enhance a video (frame-by-frame)."""
@@ -219,7 +227,9 @@ async def enhance_video(
             str(upload_path), job_id,
             model=model, upscale=upscale,
             frame_interval=frame_interval,
-            max_frames=max_frames
+            max_frames=max_frames,
+            fidelity=fidelity,
+            force_night=force_night
         )
 
         # Update job

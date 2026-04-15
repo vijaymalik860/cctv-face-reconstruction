@@ -220,7 +220,8 @@ class FaceEnhancer:
         model: str = "gfpgan",
         upscale: int = 2,
         face_enhance: bool = True,
-        bg_enhance: bool = True
+        bg_enhance: bool = True,
+        fidelity: float = 0.5
     ) -> Tuple[np.ndarray, List[np.ndarray], List[np.ndarray], float]:
         """
         Enhance an image using AI models with OpenCV fallback.
@@ -247,11 +248,11 @@ class FaceEnhancer:
             if use_ai:
                 try:
                     if model == "gfpgan":
-                        result = self._enhance_gfpgan(image, upscale)
+                        result = self._enhance_gfpgan(image, upscale, fidelity)
                     elif model == "realesrgan":
                         result = self._enhance_realesrgan_only(image, upscale)
                     else:
-                        result = self._enhance_gfpgan(image, upscale)
+                        result = self._enhance_gfpgan(image, upscale, fidelity)
                 except Exception as e:
                     print(f"[FaceEnhancer] Heavy AI failed ({e}), using FSRCNN fallback")
                     self._force_opencv = True  # Don't try heavy AI again this session
@@ -311,11 +312,11 @@ class FaceEnhancer:
     # ------------------------------------------------------------------
     # GFPGAN path
     # ------------------------------------------------------------------
-    def _enhance_gfpgan(self, image, upscale=2):
+    def _enhance_gfpgan(self, image, upscale=2, fidelity=0.5):
         restorer = self._load_gfpgan(upscale)
         cropped, restored, out = restorer.enhance(
             image, has_aligned=False, only_center_face=False,
-            paste_back=True, weight=0.5
+            paste_back=True, weight=fidelity
         )
         if out is None:
             return self._enhance_opencv(image, upscale)
@@ -384,6 +385,56 @@ class FaceEnhancer:
 
         print(f"[FaceEnhancer] Done: {w}x{h} -> {w*upscale}x{h*upscale}")
         return result, [], []
+
+    def enhance_plate(
+        self,
+        plate_crop: np.ndarray,
+        upscale: int = 4,
+    ) -> np.ndarray:
+        """
+        Sharpen / upscale a single rectified number plate crop.
+
+        Uses Real-ESRGAN ×4 for maximum text clarity.
+        Falls back to OpenCV bicubic + CLAHE + unsharp-mask when RAM is low.
+
+        Args:
+            plate_crop: BGR numpy array — rectified plate (e.g. 300×100)
+            upscale:    upscale factor (default 4 for plates)
+
+        Returns:
+            Enhanced BGR numpy array.
+        """
+        if plate_crop is None or plate_crop.size == 0:
+            return plate_crop
+
+        # Constrain input size (plates are already small — 300×100 → fine)
+        plate_crop = self._limit_size(plate_crop, max_dim=600)
+
+        try:
+            up = self._get_bg_upsampler(upscale)
+            if up is not None:
+                enhanced, _ = up.enhance(plate_crop, outscale=upscale)
+                print(f"[FaceEnhancer] Plate enhanced with Real-ESRGAN ×{upscale}")
+                return enhanced
+        except Exception as e:
+            print(f"[FaceEnhancer] Real-ESRGAN plate enhance failed: {e}")
+
+        # Fallback: fast OpenCV sharpening
+        print("[FaceEnhancer] Using OpenCV fallback for plate enhancement")
+        h, w = plate_crop.shape[:2]
+        result = cv2.resize(plate_crop, (w * upscale, h * upscale),
+                            interpolation=cv2.INTER_CUBIC)
+        # CLAHE on L channel
+        lab = cv2.cvtColor(result, cv2.COLOR_BGR2LAB)
+        L, A, B = cv2.split(lab)
+        clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(4, 4))
+        L = clahe.apply(L)
+        result = cv2.cvtColor(cv2.merge([L, A, B]), cv2.COLOR_LAB2BGR)
+        # Unsharp mask
+        blur   = cv2.GaussianBlur(result, (0, 0), 1.5)
+        result = cv2.addWeighted(result, 1.5, blur, -0.5, 0)
+        gc.collect()
+        return result
 
     def save_results(
         self,

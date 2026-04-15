@@ -23,3 +23,10 @@ psycopg2-binary>=2.9.0
 
 # Utilities
 python-dotenv>=1.0.0
+
+# Number Plate Detection & OCR
+tensorflow>=2.10.0           # WPOD-NET deep learning framework
+keras                        # WPOD-NET model parsing
+ultralytics>=8.0.0           # YOLOv8 - plate bounding box detection
+paddlepaddle                  # PaddleOCR CPU backend
+paddleocr>=2.7.0             # OCR engine for text extraction

@@ -14,13 +14,18 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Directory paths
 UPLOAD_DIR = BASE_DIR / os.getenv("UPLOAD_DIR", "uploads")
 OUTPUT_DIR = BASE_DIR / os.getenv("OUTPUT_DIR", "outputs")
-MODEL_DIR = BASE_DIR / os.getenv("MODEL_DIR", "models")
+MODEL_DIR  = BASE_DIR / os.getenv("MODEL_DIR",  "models")
 STATIC_DIR = BASE_DIR / "static"
 
-# Create directories if they don't exist
-for directory in [UPLOAD_DIR, OUTPUT_DIR, MODEL_DIR,
-                  OUTPUT_DIR / "faces", OUTPUT_DIR / "videos",
-                  OUTPUT_DIR / "frames", UPLOAD_DIR / "videos"]:
+# Create directories if they don't exist (face + plate subdirs)
+for directory in [
+    UPLOAD_DIR, OUTPUT_DIR, MODEL_DIR,
+    OUTPUT_DIR / "faces",  OUTPUT_DIR / "videos",
+    OUTPUT_DIR / "frames", UPLOAD_DIR / "videos",
+    # ---- Number Plate dirs ----
+    UPLOAD_DIR / "plates",
+    OUTPUT_DIR / "plates",
+]:
     directory.mkdir(parents=True, exist_ok=True)
 
 # Database
@@ -34,7 +39,7 @@ HOST = os.getenv("HOST", "0.0.0.0")
 PORT = int(os.getenv("PORT", "8000"))
 
 # Model settings
-DEFAULT_MODEL = os.getenv("DEFAULT_MODEL", "gfpgan")
+DEFAULT_MODEL  = os.getenv("DEFAULT_MODEL",  "gfpgan")
 DEFAULT_UPSCALE = int(os.getenv("DEFAULT_UPSCALE", "2"))
 
 # Device (Intel UHD - CPU only, no CUDA)
@@ -45,8 +50,26 @@ ALLOWED_IMAGE_TYPES = {".jpg", ".jpeg", ".png", ".bmp", ".webp", ".tiff"}
 ALLOWED_VIDEO_TYPES = {".mp4", ".avi", ".mov", ".mkv", ".wmv"}
 MAX_FILE_SIZE = 100 * 1024 * 1024  # 100MB
 
-# GFPGAN / Real-ESRGAN / FSRCNN model URLs
-GFPGAN_MODEL_URL = "https://github.com/TencentARC/GFPGAN/releases/download/v1.3.0/GFPGANv1.4.pth"
+# ============================================================
+# Face Enhancement Model URLs
+# ============================================================
+GFPGAN_MODEL_URL    = "https://github.com/TencentARC/GFPGAN/releases/download/v1.3.0/GFPGANv1.4.pth"
 REALESRGAN_MODEL_URL = "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.1/RealESRGAN_x2plus.pth"
 FSRCNN_X2_URL = "https://github.com/Saafke/FSRCNN_Tensorflow/raw/master/models/FSRCNN_x2.pb"
 FSRCNN_X4_URL = "https://github.com/Saafke/FSRCNN_Tensorflow/raw/master/models/FSRCNN_x4.pb"
+
+# ============================================================
+# Number Plate Pipeline Settings
+# ============================================================
+
+# OCR language — 'en' for English/Indian plates
+OCR_LANGUAGE = os.getenv("OCR_LANGUAGE", "en").split(",")
+
+# Default upscale for plate crops before OCR (4x gives best results for small plates)
+PLATE_UPSCALE = int(os.getenv("PLATE_UPSCALE", "4"))
+
+# Night-vision: if mean brightness < this threshold, apply CLAHE preprocessing
+NIGHT_VISION_THRESHOLD = int(os.getenv("NIGHT_VISION_THRESHOLD", "80"))
+
+# Max plates to return per image
+MAX_PLATES_PER_IMAGE = int(os.getenv("MAX_PLATES_PER_IMAGE", "10"))

@@ -7,7 +7,7 @@ import cv2
 import numpy as np
 from pathlib import Path
 from typing import List, Tuple
-from app.config import OUTPUT_DIR
+from app.config import OUTPUT_DIR, NIGHT_VISION_THRESHOLD
 
 
 class FaceDetector:
@@ -39,6 +39,27 @@ class FaceDetector:
                 cv2.data.haarcascades + "haarcascade_frontalface_alt2.xml"
             )
         print("✅ Haar Cascade face detector loaded")
+
+    def _is_night_vision(self, image: np.ndarray) -> bool:
+        """Return True if image looks like a low-light / IR frame."""
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY) if len(image.shape) == 3 else image
+        mean_brightness = float(np.mean(gray))
+        return mean_brightness < NIGHT_VISION_THRESHOLD
+
+    def preprocess_night_vision(self, image: np.ndarray) -> np.ndarray:
+        """Apply IR/night-vision normalization pipeline for faces."""
+        if len(image.shape) == 2:
+            gray = image.copy()
+        else:
+            gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+        clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8))
+        gray  = clahe.apply(gray)
+        gray = cv2.equalizeHist(gray)
+        gray = cv2.bilateralFilter(gray, d=9, sigmaColor=75, sigmaSpace=75)
+        result = cv2.cvtColor(gray, cv2.COLOR_GRAY2BGR)
+        print("[FaceDetector] Night-vision preprocessing applied")
+        return result
 
     def detect_faces(self, image: np.ndarray, min_confidence: float = 0.5) -> List[dict]:
         """

@@ -14,7 +14,9 @@ const state = {
     currentFile: null,
     currentVideoFile: null,
     isProcessing: false,
-    currentTab: 'enhance'
+    currentTab: 'enhance',
+    fidelity: 0.5,
+    force_night_face: false
 };
 
 // ============================================================
@@ -33,6 +35,8 @@ document.addEventListener('DOMContentLoaded', () => {
     initModelSelector();
     initUpscaleSelector();
     initFrameIntervalSelector();
+    initFidelitySlider();
+    initFaceNightToggle();
     initCompareSlider();
     initEnhanceButton();
     initVideoEnhanceButton();
@@ -263,6 +267,29 @@ function initFrameIntervalSelector() {
     });
 }
 
+function initFidelitySlider() {
+    const slider = $('fidelity-slider');
+    const label = $('fidelity-val');
+    if (slider) {
+        slider.addEventListener('input', (e) => {
+            state.fidelity = parseFloat(e.target.value);
+            if (label) label.textContent = state.fidelity.toFixed(2);
+        });
+    }
+}
+
+function initFaceNightToggle() {
+    const nightToggle = $('face-night-toggle');
+    if (nightToggle) {
+        nightToggle.addEventListener('change', (e) => {
+            state.force_night_face = e.target.checked;
+            // Visual feedback on the toggle slider
+            const slider = e.target.nextElementSibling;
+            if (slider) slider.style.background = e.target.checked ? "#00e676" : "#2a2a3a";
+        });
+    }
+}
+
 // ============================================================
 // Image Enhancement
 // ============================================================
@@ -309,6 +336,8 @@ async function enhanceImage() {
         formData.append('upscale', state.upscaleFactor);
         formData.append('face_enhance', true);
         formData.append('bg_enhance', true);
+        formData.append('fidelity', state.fidelity);
+        formData.append('force_night', state.force_night_face);
 
         // Send request
         const response = await fetch('/api/enhance/image', {
@@ -486,6 +515,8 @@ async function enhanceVideo() {
         formData.append('upscale', state.upscaleFactor);
         formData.append('frame_interval', state.frameInterval);
         formData.append('max_frames', maxFrames);
+        formData.append('fidelity', state.fidelity);
+        formData.append('force_night', state.force_night_face);
 
         const response = await fetch('/api/enhance/video', {
             method: 'POST',

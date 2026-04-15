@@ -94,6 +94,8 @@ class VideoProcessor:
         self, video_path: str, job_id: str,
         model: str = "gfpgan", upscale: int = 2,
         frame_interval: int = 5, max_frames: Optional[int] = 100,
+        fidelity: float = 0.5,
+        force_night: bool = False,
         progress_callback: Optional[Callable] = None
     ) -> dict:
         """
@@ -150,13 +152,16 @@ class VideoProcessor:
                 if frame is None:
                     continue
 
+                if force_night:
+                    frame = face_detector.preprocess_night_vision(frame)
+
                 # Detect faces
                 faces = face_detector.detect_faces(frame)
                 results["total_faces_detected"] += len(faces)
 
                 # Enhance frame
                 enhanced, cropped, restored, proc_time = face_enhancer.enhance_image(
-                    frame, model=model, upscale=upscale
+                    frame, model=model, upscale=upscale, fidelity=fidelity
                 )
 
                 # Save enhanced frame

@@ -27,6 +27,10 @@ def get_db():
 
 def init_db():
     """Create all tables defined by SQLAlchemy models."""
-    from app.models.schemas import ProcessingJob, FaceRegion  # noqa: F401
+    from app.models.schemas import (   # noqa: F401
+        ProcessingJob, FaceRegion,     # face enhancement tables
+        PlateDetectionJob, DetectedPlate  # number plate tables
+    )
     Base.metadata.create_all(bind=engine)
     print("✅ Database tables created successfully!")
+

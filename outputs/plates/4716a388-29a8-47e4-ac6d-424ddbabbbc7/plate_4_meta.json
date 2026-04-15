@@ -1,0 +1,12 @@
+{
+  "bbox": {
+    "x": 622,
+    "y": 67,
+    "w": 150,
+    "h": 224
+  },
+  "detection_confidence": 0.756,
+  "is_night_vision": false,
+  "ocr_text": "",
+  "ocr_confidence": 0.0
+}

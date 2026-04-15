@@ -4,3 +4,6 @@ __pycache__/
 models/
 gfpgan/weights/
 *.pth
+outputs/
+uploads/
+sample_data/
