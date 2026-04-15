@@ -2,9 +2,16 @@
 CCTV Face Reconstruction System
 Entry point for the FastAPI application.
 """
+import os
+
+# Must be set BEFORE numpy/cv2/torch are imported
+os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
+os.environ.setdefault("OMP_NUM_THREADS", "1")
+os.environ.setdefault("MKL_NUM_THREADS", "1")
+os.environ.setdefault("NUMEXPR_NUM_THREADS", "1")
+
 import uvicorn
 from dotenv import load_dotenv
-import os
 
 load_dotenv()
 
