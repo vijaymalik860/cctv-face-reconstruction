@@ -1,11 +1,22 @@
-# CCTV Face Reconstruction
+# CCTV Face & License Plate Enhancer
 
-An AI-powered web application designed to reconstruct and enhance low-quality, blurry, or low-light faces typically captured from CCTV footage. This project uses advanced deep learning models to upscale and restore facial details securely locally.
+An AI-powered web application designed to reconstruct and enhance low-quality, blurry, or low-light faces as well as detect and recognize vehicle license plates typically captured from CCTV footage. This project uses advanced deep learning models to upscale, restore details, and perform accurate fast object detection entirely locally.
 
 ## Features
-- **Face Enhancement:** Upscales and clears blurry CCTV facial crops using models like GFPGAN and Real-ESRGAN.
-- **Fast Local Processing:** Processes images natively on the machine without sending sensitive data over the internet.
-- **Web Interface:** Easy-to-use aesthetic frontend to easily upload raw images and view enhanced results side-by-side.
+
+### 👤 Face Enhancement
+- Upscales and clears blurry CCTV facial crops using models like **GFPGAN** and **Real-ESRGAN**.
+- Provides side-by-side comparisons of raw vs. enhanced images.
+
+### 🚗 License Plate Detection & Recognition (ALPR)
+- **Indian License Plate Detection:** Utilizes specialized YOLOv8 models (`indian_license_plate.pt`) for accurate vehicle and plate localization.
+- **Perspective Correction:** Employs WPOD-NET and MSER-based fallback logic to rectify skewed plates from various angles.
+- **Night / Low-Light Processing:** Dedicated processing pipeline including CLAHE, dehazing, advanced deblurring, and super-resolution to extract text from dark or deeply blurred plates.
+- **OCR & Text Cleanup:** Integrates robust OCR engines and customized post-processing to clean up Indian plate formats and remove false positives.
+- **Video Analysis:** Upload videos directly with a custom Frame Selection UI to selectively process sequence intervals (skipping frames) to save computing time while tracking moving plates.
+
+### 🔒 Fast Local Processing
+- Processes images and videos natively on your machine without sending sensitive data over the internet.
 
 ## Prerequisites
 - **Python 3.8+**
@@ -35,14 +46,13 @@ An AI-powered web application designed to reconstruct and enhance low-quality, b
 
 4. **Download AI Models (Important!)**
    Because AI models are very large, they are not included in this repository. You must download them and place them in the correct directories:
-   - Download GFPGAN/Real-ESRGAN `.pth` model weights.
-   - Place them inside the newly created `models/` folder.
-   - Example path: `models/GFPGANv1.4.pth` 
-   - (Create the `models/` or `gfpgan/weights/` directories if they do not exist).
+   - Download **GFPGAN / Real-ESRGAN** `.pth` model weights and place them inside the `models/` folder.
+   - Download the **YOLO Indian Plate** weight (`indian_license_plate.pt`) and place it correctly in the directory.
+   - Ensure the respective models required for WPOD-NET (TensorFlow/Keras architectures) are available in your path.
 
 5. **Setup Environment Variables**
    - Create a file named `.env` in the root folder.
-   - Add any necessary database credentials, ports, or secret keys required by the app inside this `.env` file.
+   - Add any necessary configurations, ports, or secret keys required by the app inside this `.env` file.
 
 ## Running the Application
 
