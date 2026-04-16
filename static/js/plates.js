@@ -17,7 +17,7 @@
   let plateUpscale = 4;
   let forceNight  = false;
   let isVideo     = false;
-  let plateFrameInterval = 10;
+  let plateFrameInterval = 5;
   let plateConf = 0.25;
   let plateOcr = 0.0;
 
@@ -216,7 +216,7 @@
       
       if (isVideo) {
         formData.append("frame_interval", plateFrameInterval);
-        formData.append("max_frames", plateMaxFrames.value || 30);
+        formData.append("max_frames", plateMaxFrames.value || 50);
       }
 
       const endpoint = isVideo
