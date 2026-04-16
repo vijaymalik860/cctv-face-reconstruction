@@ -562,10 +562,21 @@ class PlateDetector:
         ih, iw = image.shape[:2]
         crops: List[np.ndarray] = []
         for p in plates:
-            x  = max(0, p["x"] - padding)
-            y  = max(0, p["y"] - padding)
-            x2 = min(iw, p["x"] + p["w"] + padding)
-            y2 = min(ih, p["y"] + p["h"] + padding)
+            w = p["w"]
+            h = p["h"]
+            
+            # Unconditional Width Override: YOLO often returns tiny boxes of just the brightly 
+            # lit half of a night plate, giving it high confidence while ignoring the shadowed half.
+            # We force the crop width to a minimum aspect ratio of 5.0 (standard full plate).
+            target_w = max(w, int(h * 5.0))
+            pad_x = (target_w - w) // 2 + (padding * 2)
+            pad_y = int(h * 0.25) + padding
+
+            x  = max(0, p["x"] - pad_x)
+            y  = max(0, p["y"] - pad_y)
+            x2 = min(iw, p["x"] + w + pad_x)
+            y2 = min(ih, p["y"] + h + pad_y)
+            
             c  = image[y:y2, x:x2].copy()
             if c.size > 0:
                 crops.append(c)

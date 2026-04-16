@@ -72,13 +72,24 @@ class PlateOCR:
     # ------------------------------------------------------------------
     @staticmethod
     def _preprocess(img: np.ndarray) -> np.ndarray:
-        """CLAHE → Otsu threshold → morphological close → back to BGR."""
+        """Clean up FSRCNN/night-vision noise and binarize for PaddleOCR."""
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY) if img.ndim == 3 else img.copy()
-        gray = cv2.createCLAHE(clipLimit=2.5, tileGridSize=(4, 4)).apply(gray)
-        _, bw = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        
+        # 1. Median blur removes salt-and-pepper noise from heavy Night-Vision enhancement
+        blurred = cv2.medianBlur(gray, 3)
+        
+        # 2. Adaptive thresholding handles any remaining local shadow gradients
+        # much better than global Otsu thresholding.
+        thresh = cv2.adaptiveThreshold(
+            blurred, 255,
+            cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 21, 4
+        )
+        
+        # 3. Morphological close to connect broken text strokes
         kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (2, 2))
-        bw     = cv2.morphologyEx(bw, cv2.MORPH_CLOSE, kernel)
-        return cv2.cvtColor(bw, cv2.COLOR_GRAY2BGR)
+        clean = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, kernel)
+        
+        return cv2.cvtColor(clean, cv2.COLOR_GRAY2BGR)
 
     # ------------------------------------------------------------------
     # Public API

@@ -77,8 +77,26 @@ class PlateRectifier:
             return fallback_img
 
         try:
+            # Extreme illumination equalization before WPOD-NET to prevent polygon from chopping shadowed text
+            if plate_crop.ndim == 3:
+                lab = cv2.cvtColor(plate_crop, cv2.COLOR_BGR2LAB)
+                l_channel, a, b = cv2.split(lab)
+                clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(4, 4))
+                cl = clahe.apply(l_channel)
+                lab = cv2.merge((cl, a, b))
+                ench_crop = cv2.cvtColor(lab, cv2.COLOR_LAB2BGR)
+                
+                # Apply aggressive gamma lift to blast dark shadows bright (gamma ~0.35)
+                lut = np.array(
+                    [min(255, int((i / 255.0) ** 0.35 * 255)) for i in range(256)],
+                    dtype=np.uint8
+                )
+                ench_crop = cv2.LUT(ench_crop, lut)
+            else:
+                ench_crop = plate_crop
+
             # WPOD-NET typically expects BGR image converted to RGB and normalized
-            img_rgb = cv2.cvtColor(plate_crop, cv2.COLOR_BGR2RGB)
+            img_rgb = cv2.cvtColor(ench_crop, cv2.COLOR_BGR2RGB)
             img_norm = img_rgb.astype(np.float32) / 255.0
 
             ratio = float(max(img_norm.shape[:2])) / min(img_norm.shape[:2])

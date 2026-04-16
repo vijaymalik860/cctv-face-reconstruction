@@ -509,22 +509,18 @@ class FaceEnhancer:
         gc.collect()
 
         # ── Step 7: Super-resolution ─────────────────────────────────────────
+        # CRITICAL: We bypass Real-ESRGAN for night plates!
+        # Real-ESRGAN hallucinates and heavily smooths faint/shadowed text (like '950'),
+        # completely erasing it. We use FSRCNN or high-quality OpenCV interpolation instead.
         h, w = img.shape[:2]
         try:
-            up = self._get_bg_upsampler(upscale)
-            if up is not None:
-                img, _ = up.enhance(img, outscale=upscale)
-                print(f"[FaceEnhancer] Night plate SR: Real-ESRGAN ×{upscale}")
-            else:
-                raise RuntimeError("upsampler not available")
+            sr = self._load_fsrcnn(upscale)
+            img = sr.upsample(img)
+            print(f"[FaceEnhancer] Night plate SR: FSRCNN ×{upscale}")
         except Exception:
-            # FSRCNN or bicubic fallback
-            try:
-                sr = self._load_fsrcnn(upscale)
-                img = sr.upsample(img)
-            except Exception:
-                img = cv2.resize(img, (w * upscale, h * upscale),
-                                 interpolation=cv2.INTER_LANCZOS4)
+            img = cv2.resize(img, (w * upscale, h * upscale),
+                             interpolation=cv2.INTER_CUBIC)
+            print(f"[FaceEnhancer] Night plate SR: OpenCV Bicubic ×{upscale}")
 
         # ── Step 8: Final unsharp mask to crisp up characters ────────────────
         blur_final = cv2.GaussianBlur(img, (0, 0), 1.0)
