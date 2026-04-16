@@ -45,10 +45,13 @@ An AI-powered web application designed to reconstruct and enhance low-quality, b
    ```
 
 4. **Download AI Models (Important!)**
-   Because AI models are very large, they are not included in this repository. You must download them and place them in the correct directories:
-   - Download **GFPGAN / Real-ESRGAN** `.pth` model weights and place them inside the `models/` folder.
-   - Download the **YOLO Indian Plate** weight (`indian_license_plate.pt`) and place it correctly in the directory.
-   - Ensure the respective models required for WPOD-NET (TensorFlow/Keras architectures) are available in your path.
+   Because AI models are very large, they are not included in this repository. We have provided a script to automate the download process for standard models.
+   
+   Run the following command to download the models:
+   ```bash
+   python download_models.py
+   ```
+   *Note for Custom Models:* For your custom trained models (like `indian_license_plate.pt` and `wpod_net.h5`), you will need to upload them to cloud storage (like Google Drive, HuggingFace, or GitHub Releases), get a direct download link, and update the placeholder URLs inside `download_models.py`, or simply copy those files manually into the `models/` folder.
 
 5. **Setup Environment Variables**
    - Create a file named `.env` in the root folder.
